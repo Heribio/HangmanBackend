@@ -8,9 +8,8 @@ from twitch_chat_irc import twitch_chat_irc
 
 app = Flask(__name__)
 
-socketio = SocketIO(cors_allowed_origins="*", namespace="/twitch")
+socketio = SocketIO(app, cors_allowed_origins="*", namespace="/twitch")
 socketio.init_app(app, cors_allowed_origins="*")  # Bind SocketIO with Flask app
-
 
 LOG = logging.getLogger(__name__)
 
@@ -65,17 +64,21 @@ twitch_thread.start()
 def index():
     return ("OK", 200)
 
-@app.route("/twitch", methods=["GET", "POST"])
-def chat():
-    if request.method == "GET":
-        return jsonify({"chat_messages": chat_messages})
-    elif request.method == "POST":
-        data = request.get_json()
-        chat_messages.append(data)  # Append the entire message object
-        socketio.emit('chat_message', data, namespace='/twitch')
-        return jsonify({"message": data["content"]})
-    else:
-        return jsonify({"error": "Unsupported method"}), 405
+@socketio.on('connect', namespace='/twitch')
+def handle_connect():
+    emit('connected', {'data': 'Connected to Twitch WebSocket'})
+
+@socketio.on('disconnect', namespace='/twitch')
+def handle_disconnect():
+    print('Disconnected from Twitch WebSocket')
+
+@socketio.on('connect', namespace='/twitch')
+def handle_chat_message(data):
+    print("hello world")
+
+@app.route("/twitch", methods=["GET"])
+def twitch_chat_messages():
+    return 
 
 
 if __name__ == "__main__":
