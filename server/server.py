@@ -3,6 +3,9 @@ import threading
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
+import requests
+import os
+import json, random
 
 from twitch_chat_irc import twitch_chat_irc
 
@@ -14,6 +17,9 @@ socketio.init_app(app, cors_allowed_origins="*")  # Bind SocketIO with Flask app
 LOG = logging.getLogger(__name__)
 
 CORS(app)
+
+script_directory = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_directory)
 
 chat_messages = []
 
@@ -52,6 +58,24 @@ def twitch_message_received(msg):
     # Emit the new chat message to all connected clients via WebSocket
     socketio.emit('chat_message', to_send, namespace='/twitch')
 
+    user_message = to_send["content"]
+
+    # Send a letter request
+    if len(user_message) == 1 and user_message.isalpha() == True:
+        socketio.emit('letter', to_send["content"], namespace='/twitch')
+
+    # Get a word from words.json and send it
+    if user_message.lower() == "!word":
+        try:
+            with open("words.json", "r") as file:
+                word_list = json.load(file)
+                number = random.randint(0, len(word_list["dictionnary"]) - 1)
+                print(number)
+        except FileNotFoundError:
+            print("File not found. Current Working Directory:", os.getcwd())
+        response = word_list["dictionnary"][number]
+        socketio.emit('word', response, namespace='/twitch')
+
 def start_listener():
     twitch = twitch_chat_irc.TwitchChatIRC()
     twitch.listen("heribio", on_message=twitch_message_received)
@@ -72,13 +96,9 @@ def handle_connect():
 def handle_disconnect():
     print('Disconnected from Twitch WebSocket')
 
-@socketio.on('connect', namespace='/twitch')
-def handle_chat_message(data):
-    print("hello world")
-
 @app.route("/twitch", methods=["GET"])
 def twitch_chat_messages():
-    return 
+    return jsonify(chat_messages)
 
 
 if __name__ == "__main__":
