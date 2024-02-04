@@ -66,15 +66,21 @@ def twitch_message_received(msg):
 
     # Get a word from words.json and send it
     if user_message.lower() == "!word":
-        try:
-            with open("words.json", "r") as file:
-                word_list = json.load(file)
-                number = random.randint(0, len(word_list["dictionnary"]) - 1)
-                print(number)
-        except FileNotFoundError:
-            print("File not found. Current Working Directory:", os.getcwd())
-        response = word_list["dictionnary"][number]
-        socketio.emit('word', response, namespace='/twitch')
+        new_word()
+
+current_word_data = None
+
+def new_word():
+    global current_word_data
+    try:
+        with open("words.json", "r") as file:
+            word_list = json.load(file)
+            number = random.randint(0, len(word_list["dictionnary"]) - 1)
+            print(number)
+    except FileNotFoundError:
+        print("File not found. Current Working Directory:", os.getcwd())
+    current_word_data = word_list["dictionnary"][number]
+    socketio.emit('word', current_word_data, namespace='/twitch')
 
 def start_listener():
     twitch = twitch_chat_irc.TwitchChatIRC()
@@ -95,6 +101,17 @@ def handle_connect():
 @socketio.on('disconnect', namespace='/twitch')
 def handle_disconnect():
     print('Disconnected from Twitch WebSocket')
+
+@socketio.on('request_word', namespace='/twitch')
+def request_new_word():
+    print("request_word")
+    new_word()
+
+@socketio.on('request_current_word', namespace='/twitch')
+def current_word():
+    print("request_current_word")
+    if current_word_data:
+        emit('word', current_word_data, namespace='/twitch')
 
 @app.route("/twitch", methods=["GET"])
 def twitch_chat_messages():
