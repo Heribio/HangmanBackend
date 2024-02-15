@@ -12,7 +12,7 @@ from twitch_chat_irc import twitch_chat_irc
 app = Flask(__name__)
 
 socketio = SocketIO(app, cors_allowed_origins="*", namespace="/twitch")
-socketio.init_app(app, cors_allowed_origins="*")  # Bind SocketIO with Flask app
+socketio.init_app(app, cors_allowed_origins="*")  
 
 LOG = logging.getLogger(__name__)
 
